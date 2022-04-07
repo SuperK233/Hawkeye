@@ -1,0 +1,80 @@
+import networkx as nx
+import matplotlib.pyplot as plt
+from timeit import default_timer as timer
+
+#整个大的拓扑图的边和点以及权重的设计
+k =nx.Graph()
+G =nx.Graph()
+p = [('A','B',4),('E','B',3),('C','G',6),('B','C',8),
+('E','F',1),('E','D',3),('E','J',2),('D','I',3),('D','H',4)
+,('D','G',6),('G','J',4),('H','J',4),('H','I',3),\
+('I','J',8),('I','K',4),('J','O',5),('K','L',2),
+('K','O',2),('L','O',4),('M','N',3),('N','K',4),
+('N','O',9),('P','O',6),('C','E',2),('B','D',3),('J','K',4),
+     ('G','I',5),('H','Q',2),('J','L',6),('E','K',5),
+     ('E','L',6),('C','F',3),('A','D',4),('F','L',6),
+     ('L','N',4),('G','H',5),('L','M',4),('C','J',2),('C','D',6),('E','G',2),
+     ('N','R',5),('R','S',4),('M','T',2),('T','U',5),('M','R',4),('W','F',3),('A','V',6),('X','W',3),('Y','V',1)
+    ,('C','W',3),('Q','Z',4),('H','Z',8),('Z','a',1),
+    ('P','b',6),('V','W',4),('A','X',5),('T','R',3),('D','Z',2),
+     ('b','c',7),('X','d',2),('S','e',3),('a','f',4),
+     ('O','b',2),('b','g',1),('g','h',5),('g','c',6),
+     ('h','i',4),('U','j',3),('d','k',8),('Y','l',2)
+     ,('f','m',6),('e','n',7),('S','n',6),('M','U',8),('l','V',9),
+     ('j','o',5),('n','p',3),('p','q',6),('l','r',1),(
+     'r','s',4),('o','t',6),('d','W',7),('j','u',6),('o','u',5)]
+G.add_weighted_edges_from(p)
+#nx.draw_networkx(G)
+#task为目标任务路径，need为循环中用到的路径，host为四个主机节点，每次初始循环的时候将task路径中先赋值给need，本代码的目的是将输入的这些路径，通过一个路径算法输出一个大的路经集合并且涵盖这task中的这些路径
+need = []#循环中补充连通故障路径的新树的路径列表集合
+subgraphnodes = [] #来储存连通子图的节点
+#这部分是提取出故障概率大的节点
+task =[('A','B',4),('E','B',3),('E','D',3),('D','I',3),('
+I','J',8),('J','K',4),('K','L',2),('L','O',4),('P','O',6),
+('E','F',1),('D','G',6),('G','J',4),('M','N',3),('N','O',9),('J','L',6),('E','K',5),('H','J',4),('G','H',5),('E','G',2),('I','K',4),
+       ('C','F',3),('B','C',8),('A','D',4),('C','E',2),
+       ('N','R',5),('R','S',4),('M','T',2),('T','U',5),
+       ('W','F',3),('A','V',6),('X','W',3),('Y','V',1),('Q','Z',4),('H','Q',2),('P','b',6),
+       ('X','d',2),('S','e',3),('a','f',4),
+       ('b','g',1),('h','i',4),('U','j',3),('d','k',8),('Y','l',2),('f','m',6),('e','n',7)
+       ,('j','o',5),('n','p',3),('p','q',6),('l','r',1),('r','s',4),('o','t',6)]
+# for i in p:
+#     if i[2] > 5:
+#         task.append(i)
+need = task
+k.add_weighted_edges_from(need)
+pathset=[]#循环中找连通子图连接的最短路径
+#连通所有故障子图
+time_start=timer()
+while nx.is_connected(k) == False:
+    for c in nx.connected_components(k):
+        nodeset = list(k.subgraph(c).nodes())
+        subgraphnodes.append(nodeset)
+    for i in range(0,len(subgraphnodes[0])-1):
+        length, path = nx.multi_source_dijkstra(G, subgraphnodes[1], subgraphnodes[0][i])
+        pathset.append([length,path])
+    pathset.sort(key=lambda a: a[0])
+    for a in range(0,len(pathset[0][1])-1):
+        need.append((pathset[0][1][a],pathset[0][1][a+1],G[pathset[0][1][a]][pathset[0][1][a+1]]['weight']))
+    ab = k.nodes
+    bc = []
+    bc = list(ab)
+    for a in bc:
+        k.remove_node(a)
+    k.add_weighted_edges_from(need)
+    subgraphnodes=[]
+    pathset=[]
+
+#plt.show()
+H=nx.eulerize(k)
+
+nx.draw_networkx(H)
+#plt.show()
+
+paths = list(nx.eulerian_path(H))
+time_end=timer()
+print(paths)
+print('时间',time_end-time_start,'s' )
+#计算带宽
+sumbandwidth = 8+22*(len(paths)-1)+0.5*(len(paths))
+print(sumbandwidth)
