@@ -1,0 +1,144 @@
+import networkx as nx
+import matplotlib.pyplot as plt
+import  random
+import copy
+from timeit import default_timer as timer
+#功能1：找和任务节点重合率最高的路径节点集合
+def len_common(l1,l2):
+    s1, s2 = set(l1), set(l2)
+    num = len(s1.intersection(s2))
+    return num
+#功能2：两个列表检测到崇重复元素，打印出来去掉重复后的第一个列表的元素
+def shengyu(point1,point2):
+    point3 = []
+    for i in point1:
+        if i not in point2:
+            point3.append(i)
+    return point3
+#整个大的拓扑图的边和点以及权重的设计
+k =nx.Graph()
+G =nx.Graph()
+p = [('A','B',4),('E','B',3),('C','G',6),('B','C',8),
+('E','F',1),('E','D',3),('E','J',2),('D','I',3),('D','H',4),
+('D','G',6),('G','J',4),('H','J',4),('H','I',3),\
+('I','J',8),('I','K',4),('J','O',5),('K','L',2),('K','O',2),
+('L','O',4),('M','N',3),('N','K',4),('N','O',9),('P','O',6)]
+G.add_weighted_edges_from(p)
+host = ['A', 'F', 'P', 'M']
+task =[('A','B',4),('E','B',3),('C','G',6),('B','C',8),('E','F',1),
+('E','D',3),('E','J',2),('D','I',3),('D','H',4),('D','G',6),
+('G','J',4),('H','J',4),('H','I',3),\
+('I','J',8),('I','K',4),('J','O',5),('K','L',2),
+('K','O',2),('L','O',4),('M','N',3),('N','K',4),('N','O',9),('P','O',6)]
+#nx.draw_networkx(G)
+#task为目标任务路径，need为循环中用到的路径，host为四个主机节点，
+每次初始循环的时候将task路径中先赋值给need，本代码的目的是将输入
+的这些路径，通过一个路径算法输出一个大的路经集合并且涵盖这task中的这些路径
+need = []#循环中补充连通故障路径的新树的路径列表集合
+subgraphnodes = [] #来储存连通子图的节点
+pathset=[]#循环中找连通子图连接的最短路径
+pathset1=[]
+#连通所有故障子图
+tasknodes=[]
+tasknodes = k.nodes
+endpaths =[]
+getpath = []
+time_start=timer()#计时器
+while (tasknodes !=[]):
+    # print(task)
+    #step 1
+    need = []
+    need = copy.deepcopy(task)
+    k.add_weighted_edges_from(need)
+    while nx.is_connected(k) == False:
+        for c in nx.connected_components(k):
+            nodeset = list(k.subgraph(c).nodes())
+            subgraphnodes.append(nodeset)
+        for i in range(0, len(subgraphnodes[0]) - 1):
+            length, path = nx.multi_source_dijkstra(G, subgraphnodes[1], subgraphnodes[0][i])
+            pathset.append([length, path])
+        pathset.sort(key=lambda a: a[0])
+        for a in range(0, len(pathset[0][1]) - 1):
+            need.append((pathset[0][1][a], pathset[0][1][a + 1], G[pathset[0][1][a]][pathset[0][1][a + 1]]['weight']))
+        k.add_weighted_edges_from(need)
+        subgraphnodes = []
+        pathset = []
+    k.add_weighted_edges_from(need)
+    # print(need)
+    #print(task)
+    #step 2
+    nodeset1 = []
+    nodeset1 = list(k.nodes)
+    #print(nodeset1)
+    pathset1=[]
+    host1 = []#存放主机
+    if len(task) == 1:
+        host1.append(random.sample(host, 2))
+        length, path = nx.multi_source_dijkstra(G, task[0][0], host1[0][0])
+        pathset1.append([length, path])
+        length, path = nx.multi_source_dijkstra(G, task[0][1], host1[0][1])
+        pathset1.append([length, path])
+        for a in range(0, len(pathset1[0][1]) - 1):
+            need.append((pathset1[0][1][a], pathset1[0][1][a + 1], G[pathset1[0][1][a]][pathset1[0][1][a + 1]]['weight']))
+        for a in range(0, len(pathset1[1][1]) - 1):
+            need.append((pathset1[1][1][a], pathset1[1][1][a + 1], G[pathset1[1][1][a]][pathset1[1][1][a + 1]]['weight']))
+    else:
+        host1.append(random.sample(host, 2))
+        length, path = nx.multi_source_dijkstra(G, nodeset1, host1[0][0])
+        pathset1.append([length, path])
+        length, path = nx.multi_source_dijkstra(G, nodeset1, host1[0][1])
+        pathset1.append([length, path])
+        # print(pathset1)
+        for a in range(0, len(pathset1[0][1]) - 1):
+            need.append(
+                (pathset1[0][1][a], pathset1[0][1][a + 1], G[pathset1[0][1][a]][pathset1[0][1][a + 1]]['weight']))
+        for a in range(0, len(pathset1[1][1]) - 1):
+            need.append(
+                (pathset1[1][1][a], pathset1[1][1][a + 1], G[pathset1[1][1][a]][pathset1[1][1][a + 1]]['weight']))
+        # print(need)
+    k.add_weighted_edges_from(need)
+    #print(need)
+    #print(task)
+    #print(k.nodes)
+    #step 3
+    paths = list(nx.shortest_simple_paths(k, host1[0][0], host1[0][1]))  # 两个zhuij
+    #print(paths)
+    max = 0
+    for a in range(0, len(paths)):
+        if max < len_common(paths[a], tasknodes):
+            max = len_common(paths[a], tasknodes)
+            aimpath = paths[a]
+    #print(aimpath)
+    tasknodes=shengyu(tasknodes,aimpath)
+    endpaths.append(aimpath)
+    # 建立一个列表getpath将path的路径记录起来
+    getpath = []
+    for a in range(1, len(aimpath)):
+        getpath.append((aimpath[a - 1], aimpath[a], G[aimpath[a - 1]][aimpath[a]]['weight']))
+    #print(getpath)
+    #从任务路径中减去本次循环得到的路径
+    for a in getpath:
+        tmp = [(a[0], a[1], a[2]), (a[0], a[2], a[1]), (a[1], a[2], a[0]), (a[1], a[0], a[2]), (a[2], a[0], a[1]),
+               (a[2], a[1], a[0])]
+        for j in tmp:
+            if j in task:
+                task.remove(j)
+    #print(need)
+    #print(task)
+    #print(task)
+time_end=timer()
+resultpaths = []
+for i in endpaths:
+    if i not in resultpaths:
+        resultpaths.append(i)
+print(resultpaths)
+
+print('时间',time_end-time_start,'s' )
+#计算带宽
+hop = 0
+for i in resultpaths:
+    hop = hop +len(i)-1
+sumbandwidth = 8*len(resultpaths)+22*(hop-1)+4*(hop)
+print(sumbandwidth)
+
+
