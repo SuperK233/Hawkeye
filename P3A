@@ -138,7 +138,7 @@ print('时间',time_end-time_start,'s' )
 hop = 0
 for i in resultpaths:
     hop = hop +len(i)-1
-sumbandwidth = 8*len(resultpaths)+22*(hop-1)+4*(hop)
+sumbandwidth = 8*len(resultpaths)+22*(hop-1)+0.5*(hop)
 print(sumbandwidth)
 
 
